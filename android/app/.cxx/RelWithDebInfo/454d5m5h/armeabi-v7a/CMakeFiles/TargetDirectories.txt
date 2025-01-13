@@ -1,0 +1,2 @@
+C:/Users/vedan/StudioProjects/Liquid-Galaxy-Connection/android/app/.cxx/RelWithDebInfo/454d5m5h/armeabi-v7a/CMakeFiles/edit_cache.dir
+C:/Users/vedan/StudioProjects/Liquid-Galaxy-Connection/android/app/.cxx/RelWithDebInfo/454d5m5h/armeabi-v7a/CMakeFiles/rebuild_cache.dir

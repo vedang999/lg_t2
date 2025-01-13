@@ -21,7 +21,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   double _progress = 0.0;
 
   final List<Color> buttonColors = [
-    Colors.blue,
     Colors.purple,
     Colors.green,
     Colors.orange,
@@ -72,7 +71,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     required String message,
     required Future<void> Function() action,
   }) async {
-    // Pre-build the dialog widget
     final dialog = ConfirmDialog(
       title: title,
       message: message,
@@ -96,7 +94,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       },
     );
 
-    // Show dialog without animation
     await showGeneralDialog(
       context: context,
       barrierDismissible: true,
@@ -104,6 +101,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       transitionDuration: const Duration(milliseconds: 150),
       pageBuilder: (context, _, __) => dialog,
     );
+  }
+
+  Future<void> _executeDirectAction(Future<void> Function() action) async {
+    setState(() => _isLoading = true);
+    try {
+      await action();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _currentStatus = '';
+          _progress = 0.0;
+        });
+      }
+    }
   }
 
   Widget _buildProgressOverlay() {
@@ -123,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  _currentStatus,
+                  _currentStatus.isNotEmpty ? _currentStatus : 'Processing...',
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 16),
                 ),
@@ -137,11 +149,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Widget _buildButton({
     required String text,
-    required String dialogTitle,
-    required String dialogMessage,
-    required Future<void> Function() onPressed,
     required IconData icon,
     required Color color,
+    required Future<void> Function() onPressed,
+    String? dialogTitle,
+    String? dialogMessage,
   }) {
     return SizedBox(
       width: MediaQuery.of(context).size.width * 0.45,
@@ -178,11 +190,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   borderRadius: BorderRadius.circular(16),
                   onTap: _isLoading
                       ? null
-                      : () => _showConfirmDialog(
-                    title: dialogTitle,
-                    message: dialogMessage,
-                    action: onPressed,
-                  ),
+                      : () {
+                    if (dialogTitle != null && dialogMessage != null) {
+                      _showConfirmDialog(
+                        title: dialogTitle,
+                        message: dialogMessage,
+                        action: onPressed,
+                      );
+                    } else {
+                      _executeDirectAction(onPressed);
+                    }
+                  },
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     child: Column(
@@ -295,17 +313,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           alignment: WrapAlignment.center,
                           children: [
                             _buildButton(
-                              text: 'Set Slaves Refresh',
-                              icon: Icons.refresh,
-                              color: buttonColors[0],
-                              dialogTitle: 'Confirm Refresh',
-                              dialogMessage: 'This will start refreshing slave KMLs every 2 seconds and reboot all screens. Continue?',
-                              onPressed: () async => await ssh.setRefresh(),
-                            ),
-                            _buildButton(
                               text: 'Relaunch LG',
                               icon: Icons.replay,
-                              color: buttonColors[1],
+                              color: buttonColors[0],
                               dialogTitle: 'Confirm Relaunch',
                               dialogMessage: 'Are you sure you want to relaunch the Liquid Galaxy system?',
                               onPressed: () async => await ssh.relaunchLG(),
@@ -313,7 +323,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             _buildButton(
                               text: 'Reboot LG',
                               icon: Icons.restart_alt,
-                              color: buttonColors[2],
+                              color: buttonColors[1],
                               dialogTitle: 'Confirm Reboot',
                               dialogMessage: 'This will reboot all Liquid Galaxy systems. Are you sure?',
                               onPressed: () async => await ssh.rebootLG(),
@@ -321,7 +331,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             _buildButton(
                               text: 'Shutdown LG',
                               icon: Icons.power_settings_new,
-                              color: buttonColors[3],
+                              color: buttonColors[2],
                               dialogTitle: 'Confirm Shutdown',
                               dialogMessage: 'This will completely shut down all Liquid Galaxy systems. Are you sure?',
                               onPressed: () async => await ssh.shutdownLG(),
@@ -329,25 +339,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             _buildButton(
                               text: 'Set Logo',
                               icon: Icons.image,
-                              color: buttonColors[4],
-                              dialogTitle: 'Set Logo',
-                              dialogMessage: 'Do you want to set the Liquid Galaxy logo?',
+                              color: buttonColors[3],
                               onPressed: () async => await ssh.setLogos(),
                             ),
                             _buildButton(
                               text: 'Clear Logo',
                               icon: Icons.hide_image,
-                              color: buttonColors[5],
-                              dialogTitle: 'Clear Logo',
-                              dialogMessage: 'This will remove all logo KML files. This action cannot be undone. Continue?',
+                              color: buttonColors[4],
                               onPressed: () async => await ssh.cleanLogos(),
                             ),
                             _buildButton(
                               text: 'Send KML 1',
                               icon: Icons.location_city,
-                              color: buttonColors[6],
-                              dialogTitle: 'Send KML 1',
-                              dialogMessage: 'Start the tour of Taj Mahal, Pyramids, and Colosseum?',
+                              color: buttonColors[5],
                               onPressed: () async => await ssh.sendMonumentsTour(
                                 onProgress: _updateProgress,
                               ),
@@ -355,9 +359,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             _buildButton(
                               text: 'Send KML 2',
                               icon: Icons.landscape,
-                              color: buttonColors[7],
-                              dialogTitle: 'Send KML 2',
-                              dialogMessage: 'View the Great Wall of China?',
+                              color: buttonColors[6],
                               onPressed: () async => await ssh.sendGreatWallKML(
                                 onProgress: _updateProgress,
                               ),
@@ -365,17 +367,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             _buildButton(
                               text: 'Clear KML',
                               icon: Icons.clear_all,
-                              color: buttonColors[8],
-                              dialogTitle: 'Clear KML',
-                              dialogMessage: 'Do you want to clear all KML files from the system?',
-                              onPressed: () async {
-                                setState(() => _isLoading = true);
-                                try {
-                                  await ssh.cleanKML();
-                                } finally {
-                                  setState(() => _isLoading = false);
-                                }
-                              },
+                              color: buttonColors[7],
+                              onPressed: () async => await ssh.cleanKML(),
                             ),
                           ],
                         ),
